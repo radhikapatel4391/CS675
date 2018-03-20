@@ -7,42 +7,42 @@
 #define MIN(X,Y) ((X)<(Y)?(X):(Y))
 #define MAX(X,Y) ((X)>(Y)?(X):(Y))
 
-// Additional color options for drawing lines and shapes. 
+// Additional color options for drawing lines and shapes.
 #define NO_CHANGE -1
 #define INVERT    -2
 
 // For each pixel, we store the R, G, and B values scaled from 0 to 255
 // and the intensity (brightness), which is automatically set to the
 // average of R, G, and B when creating or reading a new image.
-typedef struct 
+typedef struct
 {
-	unsigned char r, g, b, i;
+    unsigned char r, g, b, i;
 } Pixel;
 
 // Notice that the pixel map uses "matrix notation," i.e., map[i][j] refers to
 // the pixel in row i and column j (counting rows and columns starts with 0).
-typedef struct 
+typedef struct
 {
-	int height, width;
-	Pixel **map;
+    int height, width;
+    Pixel **map;
 } Image;
 
 // Matrices are like Images except that they hold one real number (double) as
 // each entry instead of r, g, b, and i values.
-typedef struct 
+typedef struct
 {
-	int height, width;
-	double **map;
+    int height, width;
+    double **map;
 } Matrix;
 
-// The three supported file types using 1, 8, and 24 bits per pixel, respectively. 
+// The three supported file types using 1, 8, and 24 bits per pixel, respectively.
 typedef enum format {PBM, PGM, PPM} Format;
 
 // Create a new image of the given size and fill it with white pixels.
 // When you don't need the image anymore, don't forget to free its memory using deleteImage.
 Image createImage(int height, int width);
 
-// Delete a previously created image and free its allocated memory on the heap. 
+// Delete a previously created image and free its allocated memory on the heap.
 void deleteImage(Image img);
 
 // Create a new matrix of the given size and fill it with zeroes.
@@ -54,12 +54,12 @@ Matrix createMatrix(int height, int width);
 // When you don't need the matrix anymore, don't forget to free its memory using deleteMatrix.
 Matrix createMatrixFromArray(double *entry, int height, int width);
 
-// Delete a previously created matrix and free its allocated memory on the heap. 
+// Delete a previously created matrix and free its allocated memory on the heap.
 void deleteMatrix(Matrix mx);
 
 // Read an image from a file and allocate the required heap memory for it.
 // Notice that only binary Netpbm files are supported. Regardless of the
-// file type, all fields r, g, b, and i are filled in, with values from 0 to 255. 
+// file type, all fields r, g, b, and i are filled in, with values from 0 to 255.
 Image readImage(char *filename);
 
 // Write an image to a file. The file format (binary PBM, PGM, or PPM) is automatically
@@ -71,7 +71,7 @@ void writeImage(Image img, char *filename);
 Matrix image2Matrix(Image img);
 
 // Convert a matrix into an image with corresponding, r, g, b, and i components and size.
-// If scale == 0 then values remain unchanged but if they are below 0 or above 255, they 
+// If scale == 0 then values remain unchanged but if they are below 0 or above 255, they
 // are set to 0 or 255, respectively.
 // If scale != 0 the values are scaled so that minimum value is zero and maximum is 255.
 // Setting the gamma value allows for exponential scaling, with gamma == 1.0 enabling
@@ -83,7 +83,7 @@ Image matrix2Image(Matrix mx, int scale, double gamma);
 // If they are set to INVERT, the corresponding channels are inverted, i.e., set to 255 minus their original value
 void setPixel(Image img, int vPos, int hPos, int r, int g, int b, int i);
 
-// Draw filled ellipse in image img centered at (vCenter, hCenter) with radii vRadius and hRadius. 
+// Draw filled ellipse in image img centered at (vCenter, hCenter) with radii vRadius and hRadius.
 // Radius (0, 0) will draw an individual pixel. For setting the r, g, b, and i color values, see setPixel function.
 void filledEllipse(Image img, int vCenter, int hCenter, int vRadius, int hRadius, int r, int g, int b, int i);
 
@@ -91,18 +91,18 @@ void filledEllipse(Image img, int vCenter, int hCenter, int vRadius, int hRadius
 // For setting the r, g, b, and i color values, see setPixel function.
 void filledRectangle(Image img, int v1, int h1, int v2, int h2, int r, int g, int b, int i);
 
-// Draw straight line in image img between (v1, h1) and (v2, h2) with a given width, dash pattern, and color. 
-// Width 0 indicates single-pixel width. The inputs dash and gap determine the length in pixels of the dashes 
+// Draw straight line in image img between (v1, h1) and (v2, h2) with a given width, dash pattern, and color.
+// Width 0 indicates single-pixel width. The inputs dash and gap determine the length in pixels of the dashes
 // and the gaps between them, resp. Use 0 for either input to draw a solid line.
 // For setting the r, g, b, and i color values, see setPixel function.
 void line(Image img, int v1, int h1, int v2, int h2, int width, int dash, int gap, int r, int g, int b, int i);
 
-// Draw rectangle in image img with opposite corners (v1, h1) and (v2, h2) with a given width, dash pattern, and color. 
+// Draw rectangle in image img with opposite corners (v1, h1) and (v2, h2) with a given width, dash pattern, and color.
 // Inputs are otherwise identical to the line function.
 void rectangle(Image img, int v1, int h1, int v2, int h2, int width, int dash, int gap, int r, int g, int b, int i);
 
-// Draw ellipse in image img centered at (vCenter, hCenter) and radii (vRadius, hRadius) with a given width, dash pattern, and color. 
-// Width 0 indicates single-pixel width. The inputs dash and gap determine the length in pixels of the dashes 
+// Draw ellipse in image img centered at (vCenter, hCenter) and radii (vRadius, hRadius) with a given width, dash pattern, and color.
+// Width 0 indicates single-pixel width. The inputs dash and gap determine the length in pixels of the dashes
 // and the gaps between them, resp. Use 0 for either input to draw a solid line.
 // For setting the r, g, b, and i color values, see setPixel function.
 void ellipse(Image img, int vCenter, int hCenter, int vRadius, int hRadius, int width, int dash, int gap, int r, int g, int b, int i);

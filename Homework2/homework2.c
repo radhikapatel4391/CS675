@@ -422,16 +422,19 @@ Matrix hysteresisThresholding(Matrix m,int lowTh,int hightTh)
                     {
                         m.map[x][y] = 0;
                     }
-                }else{
+                }
+                else
+                {
                     count ++;
 
                 }
             }
         }
 
-         if (count == tcount ){
+        if (count == tcount )
+        {
             flag = false;
-         }
+        }
     }
     return m;
 }
@@ -521,4 +524,6 @@ void printMatrix(Matrix m,int sx,int sy,int ex, int ey)
     }
 
 }
+
+
 
