@@ -34,7 +34,7 @@ void printMatrix(Matrix m,int sx,int sy,int ex, int ey);
 void main()
 {
 
-    edgeDetection("1.pgm","sobel.pgm","canny.pgm");
+    edgeDetection("1.pgm","sobel_output_1.pgm","canny_output_1.pgm");
 
 }
 void edgeDetection(char *inputFilename, char *sobelFilename, char
@@ -54,27 +54,8 @@ Image sobel(Image inputImg)
 
     inputMatrix = image2Matrix(inputImg);
 
-//    Matrix temp;
-//    Image t;
-//    int k = 0;
-//    int arr[36]={220,219,183,170,120,78,209,215,200,180,131,101,211,202,182,119,87,71,176,165,121,101,100,82,100,105,90,84,119,69,79,85,97,77,75,58};
-//    temp = createMatrix(6,6);
-//    for(int x = 0; x<=5;x++){
-//        for (int y = 0 ; y<=5;y++){
-//           temp.map[x][y] = arr[k];
-//           k++;
-//        }
-//    }
-//
-//    inputMatrix = temp;
-
-
-
-    //printf("Sobel input ");
-    //printMatrix(inputMatrix,0,0,5,5);
     outputMatrix = sobelMagnitude(sobelfilterXderivative(inputMatrix),sobelfilterYderivative(inputMatrix));
-    //printf("Sobel Magnitude out put  ");
-    //printMatrix(inputMatrix,0,0,5,5);
+
     return matrix2Image(outputMatrix,1,1);
 }
 Image canny(Image inputImg)
@@ -85,26 +66,39 @@ Image canny(Image inputImg)
 
 //Step 0 image to Matrix
     oM = image2Matrix(inputImg);
-
+    printf("input\n");
+    printMatrix(oM,75,75,100,100);
 //Step 1 smoothing
     printf("Step 1 Gaussian Smoothing with sigma 1.4 and window size 5: \n\n");
     oM = gussianSmoothing(oM);
-    writeImage(matrix2Image(oM,1,1), "GussianBlurOutPut.pgm");
+   printf("gussian output \n");
+   printMatrix(oM,75,75,100,100);
+    writeImage(matrix2Image(oM,1,1), "GussianBlurOutPut_1.pgm");
 
 //Step 2 claculate magnitute and arc and do non maxima suppression
     printf("Step 2 Magnitude Calculation and Alpha: \n\n");
     xD = sobelfilterXderivative(oM);
     yD = sobelfilterYderivative(oM);
-
+   printf("X derivative output \n");
+   printMatrix(xD,75,75,100,100);
+    printf("y derivative output \n");
+   printMatrix(yD,75,75,100,100);
 //Step 3
     printf("Step 3 non Maximal Supression: \n\n");
-    oM = nonMaximalSupression(sobelMagnitude(xD,yD),sectorAllocation(arctan(xD,yD)));
-    writeImage(matrix2Image(oM,1,1), "MaximaSuppressionCanny.pgm");
-
+//    printf("arc\n");
+//    printMatrix(arctan(xD,yD),75,75,100,100);
+//    printf("Sector allocationop \n");
+//    printMatrix(sectorAllocation(arctan(xD,yD)),75,75,100,100);
+//    printf("magnitude allocationop \n");
+//    printMatrix(sobelMagnitude(xD,yD),75,75,100,100);
+    oM = nonMaximalSupression(sobelMagnitude(xD,yD), sectorAllocation(arctan(xD,yD)));
+    writeImage(matrix2Image(oM,1,1), "MaximaSuppression_atCanny_output_1.pgm");
+//    printf("maximal op \n");
+//    printMatrix(oM,75,75,100,100);
 //step 4 thresholding
 
-    printf("Step 4 hysteresis Thresholding: with threshold 5,20 \n\n");
-    oM = hysteresisThresholding(oM,5,20);
+    printf("Step 4 hysteresis Thresholding: with threshold 40,100 \n\n");
+    oM = hysteresisThresholding(oM,40,60);
 
     return matrix2Image(oM,1,1);
 }
@@ -209,22 +203,26 @@ Matrix sobelfilterYderivative(Matrix m)
 Matrix sobelMagnitude(Matrix xM,Matrix yM)
 {
     int h,w;
-    double min=0, max=0;
     h = xM.height;
     w = xM.width;
+    Matrix sop = createMatrix(h,w);
+    double min=0, max=0;
+
 
     for(int x=0; x<h; x++)
     {
         for(int y = 0; y<w; y++)
         {
             double temp = sqrt(pow(xM.map[x][y],2)+ pow(yM.map[x][y],2));
-            xM.map [x][y] = temp;
+            sop.map [x][y] = temp;
             min = temp < min ? temp: min;
             max = temp < max ? max: temp;
         }
 
     }
-    return linearScaling(xM,0,255,min,max);
+
+    return linearScaling(sop,0,255,min,max);
+    //return sop;
 }
 
 
@@ -249,99 +247,105 @@ double angle(double x, double y)
 {
     double ang;
     ang = (atan2(y,x))*(180/3.14159265);
-    return round(ang+180);
+    if(ang<0)
+    {
+        ang +=360;
+    }
+    return round(ang);
 }
-Matrix sectorAllocation(Matrix m)
+Matrix sectorAllocation(Matrix arcTan)
 {
-
+    printf("arc....\n");
+    printMatrix(arcTan,75,75,100,100);
     int h,w;
-    h = m.height;
-    w = m.width;
-
+    h = arcTan.height;
+    w = arcTan.width;
+    Matrix sAllOP = createMatrix(h,w);
     for(int x=0; x<h; x++)
     {
         for(int y = 0; y<w; y++)
         {
-            double temp = m.map[x][y];
+            double temp = arcTan.map[x][y];
             if((temp > 157.5 && temp < 202.5) || (temp < 22.5 || temp >337.5))
             {
-                m.map[x][y] = 0;
+                sAllOP.map[x][y] = 0;
 
             }
             else if((temp > 22.5 && temp < 67.5) || (temp > 202.5 && temp < 247.5))
             {
-                m.map[x][y] = 1;
+                sAllOP.map[x][y] = 1;
 
             }
             else if((temp > 67.5 && temp < 112.2) || (temp > 247.5 && temp < 292.5))
             {
-                m.map[x][y] = 2;
+                sAllOP.map[x][y] = 2;
 
             }
             else
             {
-                m.map[x][y] = 3;
+                sAllOP.map[x][y] = 3;
 
             }
         }
 
     }
-
-    return m;
+   printf("sector....\n");
+    printMatrix(sAllOP,75,75,100,100);
+    return sAllOP;
 }
 
 
-Matrix nonMaximalSupression(Matrix mag, Matrix sectorAll)
+Matrix nonMaximalSupression(Matrix magnitudeMatrix, Matrix sectorAllocateMatrix)
 {
-    Matrix oM;
-    int h,w;
 
-    h = mag.height;
-    w = mag.width;
+    printf("Magnitude....\n");
+    printMatrix(magnitudeMatrix,75,75,100,100);
+
+    printf("sector allo....\n");
+    printMatrix(sectorAllocateMatrix,75,75,100,100);
+    int h,w;
+    h = magnitudeMatrix.height;
+    w = magnitudeMatrix.width;
+
+    Matrix oM;
     oM = createMatrix(h,w);
 
     for(int x=1; x<(h-1); x++)
     {
-
         for(int y = 1; y<(w-1); y++)
         {
-
-
-            if(sectorAll.map[x][y] == 0)
+            if(sectorAllocateMatrix.map[x][y] == 0)
             {
-
-                if((mag.map[x][y] < mag.map[x-1][y]) || (mag.map[x][y] < mag.map[x+1][y]))
+                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x-1][y]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x+1][y]))
                 {
-
                     oM.map[x][y] = 0;
                 }
                 else
                 {
-                    oM.map[x][y] = mag.map[x][y];
+                    oM.map[x][y] = magnitudeMatrix.map[x][y];
+
                 }
-
-
             }
 
-            else if(sectorAll.map[x][y] == 1)
+            else if(sectorAllocateMatrix.map[x][y] == 1)
             {
 
-                if((mag.map[x][y] < mag.map[x-1][y-1]) || (mag.map[x][y] < mag.map[x+1][y+1]))
+                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x-1][y-1]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x+1][y+1]))
                 {
 
                     oM.map[x][y] = 0;
                 }
                 else
                 {
-                    oM.map[x][y] = mag.map[x][y];
+
+                    oM.map[x][y] = magnitudeMatrix.map[x][y];
+
                 }
-
-
             }
-            else if(sectorAll.map[x][y] == 2)
+            else if(sectorAllocateMatrix.map[x][y] == 2)
             {
 
-                if((mag.map[x][y] < mag.map[x][y-1]) || (mag.map[x][y] < mag.map[x][y+1]))
+                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x][y-1]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x][y+1]))
                 {
 
                     oM.map[x][y] = 0;
@@ -349,20 +353,23 @@ Matrix nonMaximalSupression(Matrix mag, Matrix sectorAll)
                 else
                 {
 
-                    oM.map[x][y] = mag.map[x][y];
+                    oM.map[x][y] = magnitudeMatrix.map[x][y];
+                     //  printf("%lf : %lf \n",sectorAllocateMatrix.map[x][y], oM.map[x][y]);
+
                 }
 
             }
             else
             {
 
-                if((mag.map[x][y] < mag.map[x+1][y-1]) || (mag.map[x][y] < mag.map[x-1][y+1]))
+                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x+1][y-1]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x-1][y+1]))
                 {
                     oM.map[x][y] = 0;
                 }
                 else
                 {
-                    oM.map[x][y] = mag.map[x][y];
+                    oM.map[x][y] = magnitudeMatrix.map[x][y];
+
                 }
 
             }
@@ -370,6 +377,9 @@ Matrix nonMaximalSupression(Matrix mag, Matrix sectorAll)
         }
 
     }
+
+     printf("Non maximal suppression allo....\n");
+    printMatrix(oM,75,75,100,100);
     return oM;
 }
 Matrix hysteresisThresholding(Matrix m,int lowTh,int hightTh)
