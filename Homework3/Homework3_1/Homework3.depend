@@ -1,0 +1,37 @@
+# depslib dependency file v1.0
+1523299081 source:c:\data\study\radhika\workspace\cs675\homework3\netpbm.c
+	"netpbm.h"
+	<stdio.h>
+	<stdlib.h>
+	<float.h>
+	<string.h>
+	<math.h>
+
+1523299117 c:\data\study\radhika\workspace\cs675\homework3\netpbm.h
+
+1523337188 source:c:\data\study\radhika\workspace\cs675\homework3\netpbm_hough.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<math.h>
+	<time.h>
+	"netpbm.h"
+
+1523299081 source:c:\data\study\radhika\workspace\cs675\homework3\homework3_1\netpbm.c
+	"netpbm.h"
+	<stdio.h>
+	<stdlib.h>
+	<float.h>
+	<string.h>
+	<math.h>
+
+1523299117 c:\data\study\radhika\workspace\cs675\homework3\homework3_1\netpbm.h
+
+1523429295 source:c:\data\study\radhika\workspace\cs675\homework3\homework3_1\netpbm_hough.c
+	<stdio.h>
+	<stdlib.h>
+	<string.h>
+	<math.h>
+	<time.h>
+	"netpbm.h"
+

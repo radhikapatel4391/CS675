@@ -9,11 +9,13 @@
 
 1521529606 c:\data\study\radhika\workspace\cs675\homework2\netpbm.h
 
-1521567840 source:c:\data\study\radhika\workspace\cs675\homework2\homework2.c
+1523241814 source:c:\data\study\radhika\workspace\cs675\homework2\homework2.c
 	<stdio.h>
 	<stdlib.h>
 	<string.h>
-	<stdbool.h>
 	<math.h>
+	"homework2.h"
+
+1523241996 c:\data\study\radhika\workspace\cs675\homework2\homework2.h
 	"netpbm.h"
 

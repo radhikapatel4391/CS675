@@ -1,539 +1,288 @@
+/**
+	HW 2 CS 675 Daisuke Tanaka
+	Type make to compile the program.
+	./homework1 to run the assignment
+*/
 
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <stdbool.h>
 #include <math.h>
-#include "netpbm.h"
-
-Image sobel(Image inputImg);
-Image canny(Image inputImg);
-void edgeDetection(char *inputFilename, char *sobelFilename, char
-                   *cannyFilename);
-
-Matrix convolve(Matrix imageM, Matrix filterM);
-Matrix linearScaling(Matrix input,int a,int b,double min,double max);
-Matrix gussianSmoothing(Matrix iImage);      //with 5*5 guassian filter with 1.4.
-void createGussianFilter(double gKernel[5][5],double sigma);
-
-Matrix sobelfilterXderivative(Matrix forXDiv);
-Matrix sobelfilterYderivative(Matrix forYDiv);
-Matrix sobelMagnitude(Matrix xMag,Matrix yMag);
-
-Matrix arctan(Matrix xMag, Matrix yMag);
-double angle(double x, double y);
-Matrix sectorAllocation(Matrix arcTan);
-
-Matrix nonMaximalSupression(Matrix mag, Matrix sectorAll);
-
-Matrix hysteresisThresholding(Matrix nonMax,int lowTh,int hightTh);
-
-void printMatrix(Matrix m,int sx,int sy,int ex, int ey);
-
+#include "homework2.h"
 
 void main()
 {
-
-    edgeDetection("1.pgm","sobel_output_1.pgm","canny_output_1.pgm");
-
-}
-void edgeDetection(char *inputFilename, char *sobelFilename, char
-                   *cannyFilename)
-{
-
-    Image img;
-    img = readImage(inputFilename);
-    writeImage(sobel(img),sobelFilename);
-    printf("Sobel Done \n");
-    writeImage(canny(img),cannyFilename);
-    printf("Done \n");
-}
-Image sobel(Image inputImg)
-{
-    Matrix inputMatrix,outputMatrix;
-
-    inputMatrix = image2Matrix(inputImg);
-
-    outputMatrix = sobelMagnitude(sobelfilterXderivative(inputMatrix),sobelfilterYderivative(inputMatrix));
-
-    return matrix2Image(outputMatrix,1,1);
-}
-Image canny(Image inputImg)
-{
-
-    printf("Canny: \n\n");
-    Matrix oM,xD,yD;
-
-//Step 0 image to Matrix
-    oM = image2Matrix(inputImg);
-    printf("input\n");
-    printMatrix(oM,75,75,100,100);
-//Step 1 smoothing
-    printf("Step 1 Gaussian Smoothing with sigma 1.4 and window size 5: \n\n");
-    oM = gussianSmoothing(oM);
-   printf("gussian output \n");
-   printMatrix(oM,75,75,100,100);
-    writeImage(matrix2Image(oM,1,1), "GussianBlurOutPut_1.pgm");
-
-//Step 2 claculate magnitute and arc and do non maxima suppression
-    printf("Step 2 Magnitude Calculation and Alpha: \n\n");
-    xD = sobelfilterXderivative(oM);
-    yD = sobelfilterYderivative(oM);
-   printf("X derivative output \n");
-   printMatrix(xD,75,75,100,100);
-    printf("y derivative output \n");
-   printMatrix(yD,75,75,100,100);
-//Step 3
-    printf("Step 3 non Maximal Supression: \n\n");
-//    printf("arc\n");
-//    printMatrix(arctan(xD,yD),75,75,100,100);
-//    printf("Sector allocationop \n");
-//    printMatrix(sectorAllocation(arctan(xD,yD)),75,75,100,100);
-//    printf("magnitude allocationop \n");
-//    printMatrix(sobelMagnitude(xD,yD),75,75,100,100);
-    oM = nonMaximalSupression(sobelMagnitude(xD,yD), sectorAllocation(arctan(xD,yD)));
-    writeImage(matrix2Image(oM,1,1), "MaximaSuppression_atCanny_output_1.pgm");
-//    printf("maximal op \n");
-//    printMatrix(oM,75,75,100,100);
-//step 4 thresholding
-
-    printf("Step 4 hysteresis Thresholding: with threshold 40,100 \n\n");
-    oM = hysteresisThresholding(oM,40,60);
-
-    return matrix2Image(oM,1,1);
-}
-Matrix convolve(Matrix imageM, Matrix filterM)
-{
-
-    int imageWidth,imageHeight,fx,fy;
-    Matrix outPutMatrix;
-    imageWidth = imageM.width;
-    imageHeight = imageM.height;
-
-    outPutMatrix = createMatrix(imageHeight,imageWidth);
-
-    fx = floor(filterM.height/2);
-    fy = floor(filterM.width/2);
-
-
-    for (int x = fx; x <(imageHeight-fx); x++)
-    {
-        for (int y = fy; y <(imageWidth-fy); y++)
-        {
-
-            for (int i = -fx; i <= fx; i++)
-            {
-                for (int j = -fy; j <= fy; j++)
-                {
-
-                    outPutMatrix.map[x][y] += filterM.map[i + fx][j + fy] * imageM.map[x + i][y + j];
-
-
-                }
-            }
-
-        }
-    }
-    return outPutMatrix;
-
-
-}
-Matrix linearScaling(Matrix input,int a,int b,double min,double max)
-{
-    int h,w;
-    h = input.height;
-    w = input.width;
-
-    for(int x=0; x<h; x++)
-    {
-        for(int y = 0; y<w; y++)
-        {
-            input.map[x][y] = ((b-a)*((input.map[x][y])- min)/(max-min)) + a;
-
-        }
-
-    }
-
-    return input;
-}
-Matrix sobelfilterXderivative(Matrix m)
-{
-
-    Matrix fx;
-    int xa[9] = {-1,0,1,-2,0,2,-1,0,1};//array for sobel filter x direction
-    int k = 0;
-    fx = createMatrix(3,3);//x filter
-
-    //create x direction and y direction filter matrix from array
-    for(int x=0; x<3; x++)
-    {
-        for(int y = 0; y<3; y++)
-        {
-            fx.map[x][y] = xa[k];
-            k++;
-        }
-    }
-
-    return convolve(m,fx);
-
-}
-Matrix sobelfilterYderivative(Matrix m)
-{
-
-    Matrix fy;
-    int k=0;
-    int ya[9] = {-1,-2,-1,0,0,0,1,2,1};//array for sobel filter y direction
-
-    fy = createMatrix(3,3);//y filter
-
-    //create x direction and y direction filter matrix from array
-    for(int x=0; x<3; x++)
-    {
-        for(int y = 0; y<3; y++)
-        {
-
-            fy.map[x][y] = ya[k];
-            k++;
-        }
-    }
-
-
-    return convolve(m,fy);
-}
-Matrix sobelMagnitude(Matrix xM,Matrix yM)
-{
-    int h,w;
-    h = xM.height;
-    w = xM.width;
-    Matrix sop = createMatrix(h,w);
-    double min=0, max=0;
-
-
-    for(int x=0; x<h; x++)
-    {
-        for(int y = 0; y<w; y++)
-        {
-            double temp = sqrt(pow(xM.map[x][y],2)+ pow(yM.map[x][y],2));
-            sop.map [x][y] = temp;
-            min = temp < min ? temp: min;
-            max = temp < max ? max: temp;
-        }
-
-    }
-
-    return linearScaling(sop,0,255,min,max);
-    //return sop;
+    printf("Radhika");
+	edgeDetection("desk.ppm", "lennasobel.pgm", "lennacanny.pbm");
+	//edgeDetection("sample.ppm", "samplesobel.pgm", "samplecanny.pbm");
+	//edgeDetection("valve.ppm", "valvesobel.pgm", "valvecanny.pbm");
 }
 
-
-Matrix arctan(Matrix xM, Matrix yM)
-{
-    int h,w;
-    h = xM.height;
-    w = xM.width;
-
-    for(int x=0; x<h; x++)
-    {
-        for(int y = 0; y<w; y++)
-        {
-            xM.map [x][y] = angle(xM.map[x][y],yM.map[x][y]);
-
-        }
-
-    }
-    return xM;
+/** Output sobel and canny output */
+void edgeDetection(char *inputFilename, char *sobelFilename, char *cannyFilename) {
+	Image input = readImage(inputFilename);
+	printf("RD");
+	writeImage(sobel(input), sobelFilename);
+	writeImage(canny(input), cannyFilename);
+	deleteImage(input);
 }
-double angle(double x, double y)
-{
-    double ang;
-    ang = (atan2(y,x))*(180/3.14159265);
-    if(ang<0)
-    {
-        ang +=360;
-    }
-    return round(ang);
+
+/** Apply Sobel filter to image */
+Image sobel(Image img) {
+	Matrix i = image2Matrix(img);
+	Matrix j = image2Matrix(img);
+	Matrix m = image2Matrix(img);
+	double sobeli[3][3] = {
+		{1,2,1},
+		{0,0,0},
+		{-1,-2,-1}
+	};
+	double sobelj[3][3] = {
+		{1,0,-1},
+		{2,0,-2},
+		{1,0,-1}
+	};
+	i = convolve(m, createMatrixFromArray(sobeli,3,3));
+	j = convolve(m, createMatrixFromArray(sobelj,3,3));
+
+	for (int y = 0; y < img.height; y++) {
+		for (int x = 0; x < img.width; x++)
+			m.map[y][x] = sqrt(pow(i.map[y][x],2) + pow(j.map[y][x],2));
+	}
+	printMatrix(m,50,50,50,50);
+	return matrix2Image(m, 1, 1.0);
 }
-Matrix sectorAllocation(Matrix arcTan)
-{
-    printf("arc....\n");
-    printMatrix(arcTan,75,75,100,100);
-    int h,w;
-    h = arcTan.height;
-    w = arcTan.width;
-    Matrix sAllOP = createMatrix(h,w);
-    for(int x=0; x<h; x++)
-    {
-        for(int y = 0; y<w; y++)
-        {
-            double temp = arcTan.map[x][y];
-            if((temp > 157.5 && temp < 202.5) || (temp < 22.5 || temp >337.5))
-            {
-                sAllOP.map[x][y] = 0;
 
-            }
-            else if((temp > 22.5 && temp < 67.5) || (temp > 202.5 && temp < 247.5))
-            {
-                sAllOP.map[x][y] = 1;
+/** Apply Canny Edge Detection to image */
+Image canny(Image img) {
+	Matrix output = image2Matrix(img);
+	Matrix magnitude = createMatrix(img.height, img.width);
+	Matrix orientation = createMatrix(img.height, img.width);
+	Matrix p = createMatrix(img.height, img.width);
+	Matrix q = createMatrix(img.height, img.width);
+	Matrix e = createMatrix(img.height, img.width);
+	Matrix sectors = createMatrix(img.height, img.width);
 
-            }
-            else if((temp > 67.5 && temp < 112.2) || (temp > 247.5 && temp < 292.5))
-            {
-                sAllOP.map[x][y] = 2;
+	//Hysteresis thresholds
+	double lowthreshold = 50;
+	double highthreshold = 90;
 
-            }
-            else
-            {
-                sAllOP.map[x][y] = 3;
+	double gaussian[5][5] = {
+		{(double)1/273,(double)4/273,(double)7/273,(double)4/273,(double)1/273},
+		{(double)4/273,(double)16/273,(double)26/273,(double)16/273,(double)4/273},
+		{(double)7/273,(double)26/273,(double)41/273,(double)26/273,(double)7/273},
+		{(double)4/273,(double)16/273,(double)26/273,(double)16/273,(double)4/273},
+		{(double)1/273,(double)4/273,(double)7/273,(double)4/273,(double)1/273}
+	};
+	double sobeli[3][3] = {
+		{1,2,1},
+		{0,0,0},
+		{-1,-2,-1}
+	};
+	double sobelj[3][3] = {
+		{1,0,-1},
+		{2,0,-2},
+		{1,0,-1}
+	};
 
-            }
-        }
+	//Smooth Image
+	output = convolve(output, createMatrixFromArray(gaussian,5,5));
 
-    }
-   printf("sector....\n");
-    printMatrix(sAllOP,75,75,100,100);
-    return sAllOP;
+	//Sobel FilteOutput
+	p = convolve(output, createMatrixFromArray(sobeli,3,3));
+	q = convolve(output, createMatrixFromArray(sobelj,3,3));
+
+	//compute magnitude, orientation and sectors of gradient
+	for (int y = 0; y < img.height; y++) {
+		for (int x = 0; x < img.width; x++) {
+			double degree = atan2(q.map[y][x], p.map[y][x]) * 180.0 / M_PI;
+			while(degree < 0.0)
+				degree += 360;
+			degree = fmod(degree,180.0);
+			//printf("degree: %f mod: %f \n", degree, mod);
+			magnitude.map[y][x] = sqrt(pow(p.map[y][x],2) + pow(q.map[y][x],2));
+			orientation.map[y][x] = degree;
+			//printf("p: %f q: %f magnitude: %f degree: %f\n", p.map[y][x], q.map[y][x], magnitude.map[y][x], degree);
+			if ((degree >=0.0 && degree <= 22.5) || (degree >= 157.5 && degree <= 180))
+				sectors.map[y][x] = 0;
+			else if (degree >=22.5 && degree <= 67.5)
+				sectors.map[y][x] = 1;
+			else if (degree >=67.5 && degree <= 112.5)
+				sectors.map[y][x] = 2;
+			else if (degree >=112.5 && degree <= 157.5)
+				sectors.map[y][x] = 3;
+		}
+	}
+
+	//Non-Maxima supression
+	for (int y = 1; y < img.height - 1; y++) {
+		for (int x = 1; x < img.width - 1; x++) {
+			int sector = sectors.map[y][x];
+			e.map[y][x] = magnitude.map[y][x];
+			if (sector == 0) {
+				if (magnitude.map[y-1][x] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+				if (magnitude.map[y+1][x] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+			}
+			if (sector == 1) {
+				if (magnitude.map[y-1][x-1] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+				if (magnitude.map[y+1][x+1] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+			}
+			if (sector == 2) {
+				if (magnitude.map[y][x-1] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+				if (magnitude.map[y][x+1] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+			}
+			if (sector == 3) {
+				if (magnitude.map[y+1][x-1] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+				if (magnitude.map[y-1][x+1] > magnitude.map[y][x])
+					 e.map[y][x] = 0;
+			}
+		}
+	}
+
+	//Hysteresis thresholds
+	for (int y = 1; y < img.height - 1; y++) {
+		for (int x = 1; x < img.width - 1; x++) {
+			if (e.map[y][x] > highthreshold)
+				e.map[y][x] = 255;
+			else if (e.map[y][x] < lowthreshold)
+				e.map[y][x] = 0;
+			else
+				e.map[y][x] = -1;
+		}
+	}
+
+	//Check Edge Candidates
+	for (int y = 1; y < img.height - 1; y++) {
+		for (int x = 1; x < img.width - 1; x++) {
+			if (e.map[y][x] == -1) {
+				if (isEightNeighbor(&e, x, y, -1))
+					output.map[y][x] = 255;
+				else
+					output.map[y][x] = 0;
+			}
+			else
+				output.map[y][x] = e.map[y][x];
+		}
+	}
+	return matrix2Image(output,0,1.0);
+}
+
+/** Convolve input matrix m1 with filter m2 */
+Matrix convolve(Matrix m1, Matrix m2) {
+	Matrix output = createMatrix(m1.height, m1.width);
+	int anchorx = m2.width % 2 == 0 ? m2.width / 2 - 1 : m2.width / 2;
+	int anchory = m2.height % 2 == 0 ? m2.height / 2 - 1 : m2.height / 2;
+	for (int y = anchory; y < m1.height - anchory; y++) {
+		for (int x = anchorx; x < m1.width - anchorx; x++)
+			output.map[y][x] = filterSum(&m1,&m2,x,y);
+	}
+	return output;
+}
+
+/** Return sum of filter at point x,y */
+double filterSum(Matrix *input, Matrix *filter, int x, int y) {
+	double sum = 0.0;
+	int anchorx = filter->width % 2 == 0 ? filter->width / 2 - 1 : filter->width / 2;
+	int anchory = filter->height % 2 == 0 ? filter->height / 2 - 1 : filter->height / 2;
+	for (int row = 0; row < filter->height; row++) {
+		for (int column = 0; column < filter->width; column++)
+			sum += filter->map[row][column] * input->map[y + row - anchory][x + column - anchorx];
+	}
+	//Subtract anchor point
+	sum -= filter->map[anchory][anchorx] * input->map[y][x];
+	return sum;
+}
+
+/** Return 1 if 8-Neightbor at x,y contains value */
+int isEightNeighbor(Matrix *m1, int x, int y, int value) {
+	if (m1->map[y-1][x-1] == value)
+		return 1;
+	if (m1->map[y][x-1] == value)
+		return 1;
+	if (m1->map[y+1][x-1] == value)
+		return 1;
+	if (m1->map[y-1][x] == value)
+		return 1;
+	if (m1->map[y+1][x] == value)
+		return 1;
+	if (m1->map[y-1][x+1] == value)
+		return 1;
+	if (m1->map[y][x+1] == value)
+		return 1;
+	if (m1->map[y+1][x+1] == value)
+		return 1;
+	return 0;
 }
 
 
-Matrix nonMaximalSupression(Matrix magnitudeMatrix, Matrix sectorAllocateMatrix)
-{
+/** Tests */
+int testConvolve() {
+	double a[4][4] = {
+		{0,1,2,3},
+		{5,5,6,7},
+		{8,9,0,1},
+		{2,3,4,5}
+	};
 
-    printf("Magnitude....\n");
-    printMatrix(magnitudeMatrix,75,75,100,100);
+	double b[5][5] = {
+		{0,1,2,3,4},
+		{5,5,6,7,8},
+		{8,9,0,1,2},
+		{2,3,4,5,6}
+	};
 
-    printf("sector allo....\n");
-    printMatrix(sectorAllocateMatrix,75,75,100,100);
-    int h,w;
-    h = magnitudeMatrix.height;
-    w = magnitudeMatrix.width;
+	double filtereven[2][2] = {
+		{-1,1},
+		{0,1}
+	};
 
-    Matrix oM;
-    oM = createMatrix(h,w);
+	double filterodd[3][3] = {
+		{1,0,-1},
+		{5,2,0},
+		{-2,3,4}
+	};
 
-    for(int x=1; x<(h-1); x++)
-    {
-        for(int y = 1; y<(w-1); y++)
-        {
-            if(sectorAllocateMatrix.map[x][y] == 0)
-            {
-                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x-1][y]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x+1][y]))
-                {
-                    oM.map[x][y] = 0;
-                }
-                else
-                {
-                    oM.map[x][y] = magnitudeMatrix.map[x][y];
+	Matrix amatrix = createMatrixFromArray(a,4,4);
+	Matrix filterevenmatrix = createMatrixFromArray(filtereven,2,2);
+	Matrix filteroddmatrix = createMatrixFromArray(filterodd,3,3);
 
-                }
-            }
+	if (filterSum(&amatrix,&filterevenmatrix,2,2) == 6.0)
+		printf("filterSum test passed!\n");
+	else
+		printf("filterSum test failed!\n");
 
-            else if(sectorAllocateMatrix.map[x][y] == 1)
-            {
+	if (filterSum(&amatrix,&filteroddmatrix,2,2) == 69.0)
+		printf("filterSum test passed!\n");
+	else
+		printf("filterSum test failed!\n");
 
-                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x-1][y-1]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x+1][y+1]))
-                {
+	if (filterSum(&amatrix,&filteroddmatrix,1,1) == 34.0)
+		printf("filterSum test passed!\n");
+	else
+		printf("filterSum test failed!\n");
 
-                    oM.map[x][y] = 0;
-                }
-                else
-                {
+	// Matrix convolved = convolve(amatrix, filterevenmatrix);
+	// printMatrix(amatrix, 0,0,4,4);
+	// printMatrix(filterevenmatrix, 0,0,2,2);
+	// printMatrix(convolved, 0,0,4,4);
 
-                    oM.map[x][y] = magnitudeMatrix.map[x][y];
-
-                }
-            }
-            else if(sectorAllocateMatrix.map[x][y] == 2)
-            {
-
-                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x][y-1]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x][y+1]))
-                {
-
-                    oM.map[x][y] = 0;
-                }
-                else
-                {
-
-                    oM.map[x][y] = magnitudeMatrix.map[x][y];
-                     //  printf("%lf : %lf \n",sectorAllocateMatrix.map[x][y], oM.map[x][y]);
-
-                }
-
-            }
-            else
-            {
-
-                if((magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x+1][y-1]) || (magnitudeMatrix.map[x][y] < magnitudeMatrix.map[x-1][y+1]))
-                {
-                    oM.map[x][y] = 0;
-                }
-                else
-                {
-                    oM.map[x][y] = magnitudeMatrix.map[x][y];
-
-                }
-
-            }
-
-        }
-
-    }
-
-     printf("Non maximal suppression allo....\n");
-    printMatrix(oM,75,75,100,100);
-    return oM;
-}
-Matrix hysteresisThresholding(Matrix m,int lowTh,int hightTh)
-{
-
-    Matrix oM;
-    int h,w;
-    h = m.height;
-    w = m.width;
-    int count = 0,tcount = (h-2)*(w-2);
-
-    oM = createMatrix(h,w);
-    for(int x=0; x<h; x++)
-    {
-        for(int y = 0; y<w; y++)
-        {
-            if(m.map[x][y] > hightTh)
-            {
-                m.map[x][y] = 255;
-                oM.map[x][y] = 255;
-            }
-            else if(m.map[x][y] < lowTh)
-            {
-                m.map[x][y] = 0;
-                oM.map[x][y] = 0;
-            }
-            else
-            {
-                oM.map[x][y] = m.map[x][y];
-            }
-        }
-    }
-    //second stage of thresholding
-    bool flag = true;
-    while(flag==true)
-    {
-        count = 0;
-        for(int x=1; x<(h-1); x++)
-        {
-            for(int y = 1; y<(w-1); y++)
-            {
-                if(m.map[x][y] > 0 && m.map[x][y] < 255)
-                {
-                    if((m.map[x-1][y] == 255)||(m.map[x+1][y] == 255)|| (m.map[x][y-1] == 255)|| (m.map[x][y+1] == 255)|| (m.map[x-1][y-1] == 255)|| (m.map[x+1][y+1] == 255)|| (m.map[x-1][y+1] == 255)|| (m.map[x+1][y-1] == 255))
-                    {
-
-                        m.map[x][y] = 255;
-                    }
-                    else
-                    {
-                        m.map[x][y] = 0;
-                    }
-                }
-                else
-                {
-                    count ++;
-
-                }
-            }
-        }
-
-        if (count == tcount )
-        {
-            flag = false;
-        }
-    }
-    return m;
+	//printMatrix(amatrix, 0,0,4,4);
+	//printMatrix(filterevenmatrix, 0,0,2,2);
+	//printf("%f",filterSum(&amatrix,&filteroddmatrix,1,1));
 }
 
-Matrix gussianSmoothing(Matrix m)
-{
-
-    Matrix fy;
-    int k=0;
-    int ya[25] = {2,4,5,4,2,4,9,12,9,4,5,12,15,12,5,4,9,12,9,4,2,4,5,4,2};
-
-    fy = createMatrix(5,5);
-
-    //create x direction and y direction filter matrix from array
-    for(int x=0; x<5; x++)
-    {
-        for(int y = 0; y<5; y++)
-        {
-
-            fy.map[x][y] = (ya[k]);
-            k++;
-        }
-    }
-
-
-    m =  convolve(m,fy);
-    //for scaling.....................
-    int h,w;
-    double min = 0,max=0;
-    h = m.height;
-    w = m.width;
-    for(int x=0; x<h; x++)
-    {
-        for(int y = 0; y<w; y++)
-        {
-            double temp = m.map [x][y];
-            min = temp < min ? temp: min;
-            max = temp < max ? max: temp;
-        }
-
-    }
-
-    m = linearScaling(m,0,255,min,max);
-
-
-    return m;
+/** Debug Function */
+void printMatrix(Matrix matrix, int startx, int starty, int width, int height) {
+	for (int y = starty; y < starty + height; y++) {
+		for (int x = startx; x < startx + width; x++)
+			printf("%.*f ",0, matrix.map[y][x]);
+		printf("\n");
+	}
 }
-void createGussianFilter(double gKernel[5][5],double sigma)
-{
-    // set standard deviation to 1.0
-
-    double r, s = 2.0 * sigma * sigma;
-
-    // sum is for normalization
-    double sum = 0.0;
-
-    // generate 5x5 kernel
-    for (int x = -2; x <= 2; x++)
-    {
-        for(int y = -2; y <= 2; y++)
-        {
-            r = (x*x + y*y);
-            gKernel[x + 2][y + 2] = (exp(-(r)/s))/(3.14 * s);
-            sum += gKernel[x + 2][y + 2];
-            // printf("I am sum  %.1lf ",sum);
-        }
-    }
-    // normalize the Kernel
-//    for(int i = 0; i < 5; ++i)
-//        for(int j = 0; j < 5; ++j){
-//            gKernel[i][j] /= sum;
-//            gKernel[i][j] = round(gKernel[i][j]);
-//        }
-
-}
-
-void printMatrix(Matrix m,int sx,int sy,int ex, int ey)
-{
-    printf("MAtrix: \n\n");
-    for(int x = sx; x<ex; x++)
-    {
-        for (int y = sy ; y<ey; y++)
-        {
-            printf(" %0.0f ",m.map[x][y]);
-        }
-        printf("\n");
-    }
-
-}
-
-
-
